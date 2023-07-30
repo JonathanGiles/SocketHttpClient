@@ -1,11 +1,12 @@
 package net.jonathangiles.httpclient.socket;
 
+import java.util.Collections;
 import java.util.Map;
 
 public class HttpResponse {
-    private int statusCode;
-    private Map<String, String> headers;
-    private String body;
+    private final int statusCode;
+    private final Map<String, String> headers;
+    private final String body;
 
     public HttpResponse(int statusCode, Map<String, String> headers, String body) {
         this.statusCode = statusCode;
@@ -18,7 +19,7 @@ public class HttpResponse {
     }
 
     public Map<String, String> getHeaders() {
-        return headers;
+        return Collections.unmodifiableMap(headers);
     }
 
     public String getBody() {

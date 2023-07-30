@@ -36,36 +36,19 @@ public class SocketHttpClient {
         this.password = password;
     }
 
-    public HttpResponse sendRequest(final HttpRequest httpRequest) throws IOException, URISyntaxException {
+    public HttpResponse sendRequest(final HttpRequest httpRequest) throws URISyntaxException {
         final URI uri = new URI("http", null, host, port, httpRequest.getPath(), null, null);
         final String request = buildRequest(httpRequest, uri);
-
-        final int responseStatusCode;
-        final Map<String, String> responseHeaders;
-        final String responseBody;
 
         try (final Socket socket = new Socket(uri.getHost(), port);
              final OutputStream output = socket.getOutputStream()) {
             output.write(request.getBytes(StandardCharsets.UTF_8));
 
             try (final BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
-                final String statusLine = input.readLine();
-                responseStatusCode = Integer.parseInt(statusLine.split(" ")[1]);
-
-                responseHeaders = new HashMap<>();
-                String headerLine;
-                while ((headerLine = input.readLine()) != null && !headerLine.isEmpty()) {
-                    final String[] parts = PATTERN_COLON_SPLIT.split(headerLine);
-                    responseHeaders.put(parts[0], parts[1]);
-                }
-
-                final StringBuilder bodyBuilder = new StringBuilder();
-                String line;
-                while ((line = input.readLine()) != null && !line.isEmpty()) {
-                    bodyBuilder.append(line);
-                }
-                responseBody = bodyBuilder.toString();
+                return handleResponse(input);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
 //        final String responseString = response.toString();
@@ -83,7 +66,9 @@ public class SocketHttpClient {
 //        }
 //
 //        return responseString;
-        return new HttpResponse(responseStatusCode, responseHeaders, responseBody);
+
+        // FIXME
+        return null;
     }
 
     private String buildRequest(final HttpRequest httpRequest, final URI uri) {
@@ -115,14 +100,35 @@ public class SocketHttpClient {
         }
 
         if (httpRequest.getBody() != null) {
-            final byte[] bodyBytes = httpRequest.getBody().getBytes(StandardCharsets.UTF_8);
+            final byte[] bodyBytes = httpRequest.getBody();
             request.append("Content-Length: ").append(bodyBytes.length).append("\r\n");
             request.append("\r\n");
-            request.append(httpRequest.getBody());
+            request.append(new String(bodyBytes, StandardCharsets.UTF_8));
         } else {
             request.append("\r\n");
         }
 
         return request.toString();
+    }
+
+    private HttpResponse handleResponse(final BufferedReader input) throws IOException {
+        final String statusLine = input.readLine();
+        final int responseStatusCode = Integer.parseInt(statusLine.split(" ")[1]);
+
+        final Map<String, String> responseHeaders = new HashMap<>();
+        String headerLine;
+        while ((headerLine = input.readLine()) != null && !headerLine.isEmpty()) {
+            final String[] parts = PATTERN_COLON_SPLIT.split(headerLine);
+            responseHeaders.put(parts[0], parts[1]);
+        }
+
+        final StringBuilder bodyBuilder = new StringBuilder();
+        String line;
+        while ((line = input.readLine()) != null) { // && !line.isEmpty()) {
+            bodyBuilder.append(line);
+        }
+        final String responseBody = bodyBuilder.toString();
+
+        return new HttpResponse(responseStatusCode, responseHeaders, responseBody);
     }
 }

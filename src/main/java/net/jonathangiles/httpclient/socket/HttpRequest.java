@@ -1,24 +1,30 @@
 package net.jonathangiles.httpclient.socket;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 public class HttpRequest {
     private final HttpMethod method;
     private final String path;
-    private Map<String, String> headers;
+    private Map<String, List<String>> headers;
     private Map<String, String> queryParams;
-    private String body;
+    private byte[] body;
 
     public HttpRequest(final HttpMethod method, final String path) {
-        this(method, path, null);
+        this.method = method;
+        this.path = path;
     }
 
     public HttpRequest(final HttpMethod method, final String path, final String body) {
         this.method = method;
         this.path = path;
-        this.body = body;
+        setBody(body);
+    }
+
+    public HttpRequest(final HttpMethod method, final String path, final byte[] body) {
+        this.method = method;
+        this.path = path;
+        setBody(body);
     }
 
 //    public HttpRequest(final HttpMethod method, final String path, Map<String, String> headers, final String body) {
@@ -54,7 +60,7 @@ public class HttpRequest {
         }
     }
 
-    public Map<String, String> getHeaders() {
+    public Map<String, List<String>> getHeaders() {
         return headers == null ? Collections.emptyMap() : headers;
     }
 
@@ -62,12 +68,12 @@ public class HttpRequest {
         if (headers == null) {
             headers = new HashMap<>();
         }
-        headers.put(name, value);
+        headers.computeIfAbsent(name, k -> new ArrayList<>()).add(value);
         return this;
     }
 
     public Map<String, String> getQueryParams() {
-        return queryParams;
+        return queryParams == null ? Collections.emptyMap() : queryParams;
     }
 
     public HttpRequest addQueryParam(String name, String value) {
@@ -78,11 +84,16 @@ public class HttpRequest {
         return this;
     }
 
-    public String getBody() {
+    public byte[] getBody() {
         return body;
     }
 
     public HttpRequest setBody(final String body) {
+        this.body = body.getBytes(StandardCharsets.UTF_8);
+        return this;
+    }
+
+    public HttpRequest setBody(final byte[] body) {
         this.body = body;
         return this;
     }
